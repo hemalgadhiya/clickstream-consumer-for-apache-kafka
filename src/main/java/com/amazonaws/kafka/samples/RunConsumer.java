@@ -91,7 +91,7 @@ class RunConsumer implements Callable<String> {
                     globalSeqNo = record.value().getGlobalseq();
                     propagationDelay += System.currentTimeMillis() - record.value().getEventtimestamp();
                     numberOfMessages++;
-                    propagationlist.add(propagationDelay);
+                    propagationlist.add(System.currentTimeMillis() - record.value().getEventtimestamp());
                     if (numberOfMessages % 1000 == 0) {
                         perc = percentile(propagationlist, 99.00);
                         avgPropagationDelay = (double) propagationDelay / numberOfMessages;
@@ -122,6 +122,7 @@ class RunConsumer implements Callable<String> {
             logger.info("{} - Messages processed = {} \n", Thread.currentThread().getName(), numberOfMessages);
             logger.info("{} - Avg Propagation delay in milliseconds: = {} \n", Thread.currentThread().getName(),
                     avgPropagationDelay);
+            logger.info("{} - P99 in milliseconds = {} \n", Thread.currentThread().getName(), perc);
             Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
                     String.format("Last GlobalSeqNo:%d\n", globalSeqNo), true);
             Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
