@@ -66,7 +66,7 @@ class RunConsumer implements Callable<String> {
         int numberOfMessages = 0;
         long propagationDelay = 0L;
         long globalSeqNo = 0L;
-        Number perc = 0;
+        double perc = 0;
         Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
         final String topicPattern = "(" + Pattern.quote(KafkaClickstreamConsumer.topic) + "|"
                 + Pattern.quote((replicatedTopic)) + ")";
@@ -93,7 +93,7 @@ class RunConsumer implements Callable<String> {
                     numberOfMessages++;
                     propagationlist.add(System.currentTimeMillis() - record.value().getEventtimestamp());
                     if (numberOfMessages % 1000 == 0) {
-                        perc = percentile(propagationlist, 99.00);
+                        perc = (double) Quantiles.percentiles().index(99).compute(propagationlist);
                         avgPropagationDelay = (double) propagationDelay / numberOfMessages;
                         logger.info("{} - P99 in millisecond: {} \n", Thread.currentThread().getName(), perc);
                         logger.info("{} - Avg Propagation delay in milliseconds: {} \n",
