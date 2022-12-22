@@ -94,7 +94,7 @@ class RunConsumer implements Callable<String> {
                     propagationlist.add(System.currentTimeMillis() - record.value().getEventtimestamp());
                     logger.info(System.currentTimeMillis() - record.value().getEventtimestamp());
                     if (numberOfMessages % 1000 == 0) {
-                        perc = (double) Quantiles.percentiles().index(99).compute(propagationlist);
+                        perc = Quantiles.percentiles().index(99).compute(propagationlist);
                         avgPropagationDelay = (double) propagationDelay / numberOfMessages;
                         logger.info("{} - P99 in millisecond: {} \n", Thread.currentThread().getName(), perc);
                         logger.info("{} - Avg Propagation delay in milliseconds: {} \n",
