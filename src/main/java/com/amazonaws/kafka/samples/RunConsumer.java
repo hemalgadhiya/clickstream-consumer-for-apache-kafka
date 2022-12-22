@@ -72,6 +72,7 @@ class RunConsumer implements Callable<String> {
                 + Pattern.quote((replicatedTopic)) + ")";
 
         List<Long> propagationlist = new ArrayList<Long>();
+
         try {
 
             consumer.subscribe(Pattern.compile(topicPattern),
@@ -93,7 +94,7 @@ class RunConsumer implements Callable<String> {
                     numberOfMessages++;
                     propagationlist.add(System.currentTimeMillis() - record.value().getEventtimestamp());
                     logger.info(System.currentTimeMillis() - record.value().getEventtimestamp());
-                    if (numberOfMessages % 1000 == 0) {
+                    if (numberOfMessages % 10 == 0) {
                         perc = Quantiles.percentiles().index(99).compute(propagationlist);
                         avgPropagationDelay = (double) propagationDelay / numberOfMessages;
                         logger.info("{} - P99 in millisecond: {} \n", Thread.currentThread().getName(), perc);
