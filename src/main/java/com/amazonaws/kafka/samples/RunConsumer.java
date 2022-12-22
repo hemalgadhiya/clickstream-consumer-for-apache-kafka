@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger;
 import samples.clickstream.avro.ClickEvent;
 import java.io.*;
 import java.time.Duration;
-import java.util.ArrayList;
+// import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,12 +66,12 @@ class RunConsumer implements Callable<String> {
         int numberOfMessages = 0;
         long propagationDelay = 0L;
         long globalSeqNo = 0L;
-        double perc = 0;
+        // double perc = 0;
         Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
         final String topicPattern = "(" + Pattern.quote(KafkaClickstreamConsumer.topic) + "|"
                 + Pattern.quote((replicatedTopic)) + ")";
 
-        List<Long> propagationlist = new ArrayList<Long>();
+        // List<Long> propagationlist = new ArrayList<Long>();
 
         try {
 
@@ -92,12 +92,13 @@ class RunConsumer implements Callable<String> {
                     globalSeqNo = record.value().getGlobalseq();
                     propagationDelay += System.currentTimeMillis() - record.value().getEventtimestamp();
                     numberOfMessages++;
-                    propagationlist.add(System.currentTimeMillis() - record.value().getEventtimestamp());
-                    logger.info(System.currentTimeMillis() - record.value().getEventtimestamp());
-                    if (numberOfMessages % 10 == 0) {
-                        perc = Quantiles.percentiles().index(99).compute(propagationlist);
+                    // propagationlist.add(System.currentTimeMillis() -
+                    // record.value().getEventtimestamp());
+                    if (numberOfMessages % 1000 == 0) {
+                        // perc = Quantiles.percentiles().index(99).compute(propagationlist);
                         avgPropagationDelay = (double) propagationDelay / numberOfMessages;
-                        logger.info("{} - P99 in millisecond: {} \n", Thread.currentThread().getName(), perc);
+                        // logger.info("{} - P99 in millisecond: {} \n",
+                        // Thread.currentThread().getName(), perc);
                         logger.info("{} - Avg Propagation delay in milliseconds: {} \n",
                                 Thread.currentThread().getName(), avgPropagationDelay);
                         logger.info("{} - Messages processed: {} \n", Thread.currentThread().getName(),
@@ -124,7 +125,8 @@ class RunConsumer implements Callable<String> {
             logger.info("{} - Messages processed = {} \n", Thread.currentThread().getName(), numberOfMessages);
             logger.info("{} - Avg Propagation delay in milliseconds: = {} \n", Thread.currentThread().getName(),
                     avgPropagationDelay);
-            logger.info("{} - P99 in milliseconds = {} \n", Thread.currentThread().getName(), perc);
+            // logger.info("{} - P99 in milliseconds = {} \n",
+            // Thread.currentThread().getName(), perc);
             Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
                     String.format("Last GlobalSeqNo:%d\n", globalSeqNo), true);
             Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
