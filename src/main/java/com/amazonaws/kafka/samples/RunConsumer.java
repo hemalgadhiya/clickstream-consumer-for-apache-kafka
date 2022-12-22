@@ -8,10 +8,13 @@ import org.apache.logging.log4j.Logger;
 import samples.clickstream.avro.ClickEvent;
 import java.io.*;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import com.google.common.math.*;;
 
 class RunConsumer implements Callable<String> {
 
@@ -24,9 +27,9 @@ class RunConsumer implements Callable<String> {
     private Map<TopicPartition, Long> checkpointLag;
 
     RunConsumer(Map<TopicPartition, OffsetAndMetadata> mm2TranslatedOffsets, String replicatedTopic) {
-       this.mm2TranslatedOffsets = mm2TranslatedOffsets;
-       consumer = new KafkaConsumerFactory().createConsumer();
-       this.replicatedTopic = replicatedTopic;
+        this.mm2TranslatedOffsets = mm2TranslatedOffsets;
+        consumer = new KafkaConsumerFactory().createConsumer();
+        this.replicatedTopic = replicatedTopic;
     }
 
     RunConsumer(String replicatedTopic) {
@@ -39,38 +42,71 @@ class RunConsumer implements Callable<String> {
         consumer.wakeup();
     }
 
+    static Number percentile(List<Long> list, double percentile) {
+        if (list.isEmpty()) {
+            return 0.0;
+        }
+
+        // index should be a full integer. use quantile scale to allow reporting of
+        // percentile values
+        // such as p99.9.
+        double percentileCopy = percentile;
+        int quantileScale = 100;
+        while ((percentileCopy - Math.floor(percentileCopy)) > 0) {
+            quantileScale *= 10;
+            percentileCopy *= 10;
+        }
+
+        return Quantiles.scale(quantileScale).index((int) Math.floor(quantileScale - percentileCopy)).compute(list);
+    }
+
     @Override
     public String call() throws IOException {
         double avgPropagationDelay = 0;
         int numberOfMessages = 0;
         long propagationDelay = 0L;
         long globalSeqNo = 0L;
+        Number perc = 0;
         Map<TopicPartition, OffsetAndMetadata> currentOffsets = new HashMap<>();
-        final String topicPattern = "(" + Pattern.quote(KafkaClickstreamConsumer.topic) + "|" + Pattern.quote((replicatedTopic)) + ")";
+        final String topicPattern = "(" + Pattern.quote(KafkaClickstreamConsumer.topic) + "|"
+                + Pattern.quote((replicatedTopic)) + ")";
 
+        List<Long> propagationlist = new ArrayList<Long>();
         try {
 
-            consumer.subscribe(Pattern.compile(topicPattern), new Rebalance(consumer, currentOffsets, mm2TranslatedOffsets));
+            consumer.subscribe(Pattern.compile(topicPattern),
+                    new Rebalance(consumer, currentOffsets, mm2TranslatedOffsets));
             consumer.poll(Duration.ofSeconds(2));
 
             while (!(cancel)) {
                 ConsumerRecords<String, ClickEvent> records = consumer.poll(Duration.ofSeconds(1));
                 if (records.count() == 0)
-                    logger.info(Thread.currentThread().getName() + " - " + System.currentTimeMillis() + "  Waiting for data. Number of records retrieved: " + records.count());
+                    logger.info(Thread.currentThread().getName() + " - " + System.currentTimeMillis()
+                            + "  Waiting for data. Number of records retrieved: " + records.count());
                 for (ConsumerRecord<String, ClickEvent> record : records) {
                     if (numberOfMessages == 0)
-                        logger.info("{} - Topic = {}, Partition = {}, offset = {}, key = {}, value = {}\n", Thread.currentThread().getName(), record.topic(), record.partition(), record.offset(), record.key().trim(), record.value());
+                        logger.info("{} - Topic = {}, Partition = {}, offset = {}, key = {}, value = {}\n",
+                                Thread.currentThread().getName(), record.topic(), record.partition(), record.offset(),
+                                record.key().trim(), record.value());
                     globalSeqNo = record.value().getGlobalseq();
                     propagationDelay += System.currentTimeMillis() - record.value().getEventtimestamp();
                     numberOfMessages++;
-                    if (numberOfMessages % 1000 == 0){
-                        avgPropagationDelay = (double)propagationDelay/numberOfMessages;
-                        logger.info("{} - Avg Propagation delay in milliseconds: {} \n", Thread.currentThread().getName(), avgPropagationDelay);
-                        logger.info("{} - Messages processed: {} \n", Thread.currentThread().getName(), numberOfMessages);
-                        logger.info("{} - Topic = {}, Partition = {}, offset = {}, key = {}, value = {} \n", Thread.currentThread().getName(), record.topic(), record.partition(), record.offset(), record.key().trim(), record.value());
+                    propagationlist.add(propagationDelay);
+                    if (numberOfMessages % 1000 == 0) {
+                        perc = percentile(propagationlist, 99.00);
+                        avgPropagationDelay = (double) propagationDelay / numberOfMessages;
+                        logger.info("{} - P99 in millisecond: {} \n", Thread.currentThread().getName(), perc);
+                        logger.info("{} - Avg Propagation delay in milliseconds: {} \n",
+                                Thread.currentThread().getName(), avgPropagationDelay);
+                        logger.info("{} - Messages processed: {} \n", Thread.currentThread().getName(),
+                                numberOfMessages);
+                        logger.info("{} - Topic = {}, Partition = {}, offset = {}, key = {}, value = {} \n",
+                                Thread.currentThread().getName(), record.topic(), record.partition(), record.offset(),
+                                record.key().trim(), record.value());
                     }
 
-                    currentOffsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1, "No Metadata"));
+                    currentOffsets.put(new TopicPartition(record.topic(), record.partition()),
+                            new OffsetAndMetadata(record.offset() + 1, "No Metadata"));
                 }
                 consumer.commitAsync(currentOffsets, null);
             }
@@ -84,12 +120,16 @@ class RunConsumer implements Callable<String> {
             logger.info("{} - Last GlobalSeqNo = {} \n", Thread.currentThread().getName(), globalSeqNo);
             logger.info("{} - Last Offsets = {} \n", Thread.currentThread().getName(), currentOffsets);
             logger.info("{} - Messages processed = {} \n", Thread.currentThread().getName(), numberOfMessages);
-            logger.info("{} - Avg Propagation delay in milliseconds: = {} \n", Thread.currentThread().getName(), avgPropagationDelay);
-            Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation, String.format("Last GlobalSeqNo:%d\n", globalSeqNo), true);
-            Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation, String.format("Messages Processed:%d\n", numberOfMessages), true);
+            logger.info("{} - Avg Propagation delay in milliseconds: = {} \n", Thread.currentThread().getName(),
+                    avgPropagationDelay);
+            Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
+                    String.format("Last GlobalSeqNo:%d\n", globalSeqNo), true);
+            Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation,
+                    String.format("Messages Processed:%d\n", numberOfMessages), true);
 
             for (Map.Entry<TopicPartition, OffsetAndMetadata> entry : currentOffsets.entrySet()) {
-                Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation, String.format("TopicPartitionOffset:%s,%s\n", entry.getKey().toString(), entry.getValue().offset()), true);
+                Util.writeFile(KafkaClickstreamConsumer.bookmarkFileLocation, String.format(
+                        "TopicPartitionOffset:%s,%s\n", entry.getKey().toString(), entry.getValue().offset()), true);
             }
 
             try {

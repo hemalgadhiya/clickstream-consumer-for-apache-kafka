@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.amazonaws.kafka.samples</groupId>
@@ -79,10 +79,16 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws.kafka.samples</groupId>
-            <artifactId>CustomMM2ReplicationPolicy</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>23.6-jre</version>
         </dependency>
+
+        <!-- <dependency>
+            <groupId>com.amazonaws.kafka.samples</groupId>
+        <artifactId>CustomMM2ReplicationPolicy</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency> -->
 
         <dependency>
             <groupId>com.amazonaws.kafka.samples.saslscram</groupId>
@@ -150,7 +156,8 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.amazonaws.kafka.samples.KafkaClickstreamConsumer</mainClass>
                                 </transformer>
                             </transformers>
@@ -160,7 +167,6 @@
             </plugin>
         </plugins>
     </build>
-
 
 
 </project>
