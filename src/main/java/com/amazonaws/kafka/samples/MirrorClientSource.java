@@ -48,6 +48,8 @@ class MirrorClientSource extends MirrorClient {
                 for (ConsumerRecord<byte[], byte[]> record : records) {
                     try {
                         Checkpoint checkpoint = Checkpoint.deserializeRecord(record);
+			logger.info("checkpoint consumer group ID: {}", checkpoint.consumerGroupId());
+			logger.info("Consumer group ID: {}", consumerGroupId);
                         if (checkpoint.consumerGroupId().equals(consumerGroupId)) {
                             offsets.put(checkpoint.topicPartition(), new OffsetAndMetadata(checkpoint.upstreamOffset(), null));
                         }

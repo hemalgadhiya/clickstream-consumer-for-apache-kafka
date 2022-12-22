@@ -131,12 +131,16 @@ public class KafkaClickstreamConsumer {
     private Map<TopicPartition, Long> getCheckPointLag(MirrorClientSource mirrorClientSource) throws IOException {
 
         Map<TopicPartition, OffsetAndMetadata> sourceConsumerOffsets = mirrorClientSource.sourceConsumerOffsets(consumerProperties.getProperty(ConsumerConfig.GROUP_ID_CONFIG), KafkaClickstreamConsumer.sourceCluster, Duration.ofSeconds(20L));
-        if (sourceConsumerOffsets.size() == 0) {
+       
+	logger.info("sourceConsumerOffsets size: {}", sourceConsumerOffsets.size());
+       
+	if (sourceConsumerOffsets.size() == 0) {
             logger.error("Error retrieving source consumer offsets from the MM2 checkpoint topic.");
             throw new RuntimeException("Error retrieving source consumer offsets from the MM2 checkpoint topic.");
         }
         Map<TopicPartition, OffsetAndMetadata> offsetsFromFile = Util.getOffsetsFromFile(KafkaClickstreamConsumer.bookmarkFileLocation, "TopicPartitionOffset", ":", ",", "-");
-        if (offsetsFromFile.size() == 0) {
+       
+       	if (offsetsFromFile.size() == 0) {
             logger.error("Error retrieving source last consumer offsets from the consumer bookmark file {}. \n", bookmarkFileLocation);
             throw new RuntimeException("Error retrieving source consumer offsets from the MM2 checkpoint topic.");
         }

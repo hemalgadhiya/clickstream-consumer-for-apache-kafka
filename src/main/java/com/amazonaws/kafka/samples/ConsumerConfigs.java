@@ -46,7 +46,7 @@ class ConsumerConfigs {
 
     private static String getSaslScramString() {
         String secretNamePrefix = "AmazonMSK_";
-        String secret = Secrets.getSecret(secretNamePrefix + KafkaClickstreamConsumer.saslscramUser, Secrets.getSecretsManagerClient(KafkaClickstreamConsumer.region));
+        String secret = Secrets.getSecret(secretNamePrefix + "replication", Secrets.getSecretsManagerClient(KafkaClickstreamConsumer.region));
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode;
         try {

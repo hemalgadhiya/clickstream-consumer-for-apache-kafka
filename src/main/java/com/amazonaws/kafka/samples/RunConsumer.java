@@ -54,7 +54,7 @@ class RunConsumer implements Callable<String> {
             consumer.poll(Duration.ofSeconds(2));
 
             while (!(cancel)) {
-                ConsumerRecords<String, ClickEvent> records = consumer.poll(Duration.ofSeconds(10));
+                ConsumerRecords<String, ClickEvent> records = consumer.poll(Duration.ofSeconds(1));
                 if (records.count() == 0)
                     logger.info(Thread.currentThread().getName() + " - " + System.currentTimeMillis() + "  Waiting for data. Number of records retrieved: " + records.count());
                 for (ConsumerRecord<String, ClickEvent> record : records) {
